@@ -1,0 +1,5 @@
+cloud_id                 = ""
+folder_id                = ""
+service_account_key_file = "./terraform-key.json"
+public_key_path          = "~/.ssh/id_rsa.pub"
+image_id                 = "fd83klic6c8gfgi40urb"

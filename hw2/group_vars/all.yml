@@ -1,0 +1,91 @@
+---
+domain: otus.ha
+iscsi_device: /dev/vdb
+iscsi_username: targetuser
+iscsi_pass: superpassword
+iscsi_target: "iqn.{{ now(fmt='%Y-%m') }}.ha.otus:mtarget"
+
+gfs2_name: 'otusha:gfs2'
+gfs2_physical_disk: '/dev/sda'
+gfs2_mp_device: '/dev/mapper/mpatha'
+gfs2_volume_group: 'cluster_vg'
+gfs2_logical_volume: 'cluster_lv'
+gfs2_volume_size: '8000'
+
+pacemaker_hacluster_password: '$6$5lhDBbyI99pyKgrC$QH87jyVwK/W6ppCMEQoUKAAXQdoN.DUszO/JU3HPzBMW0r7Q83H5jXh3HYdxHExMGp.o07ZAeySFK/uGqqsuH/'
+pacemaker_cluster_group: 'gfs2_nodes'
+corosync_bindnet_interface: "eth0"
+corosync_cluster_name: "otusha"
+etc_hosts_add_all_hosts: true
+corosync_unicast_mode: true
+pacemaker_cluster_resources:
+  - resource_id: 'virtual_ip'
+    action: 'create'
+    provider: 'ocf:heartbeat:IPaddr2'
+    options:
+      - 'ip=10.10.50.100'
+      - 'cidr_netmask=32'
+      - 'nic=eth0'
+    op: 'monitor'
+    op_options:
+      - 'interval=30s'
+  - resource_id: 'dlm'
+    action: 'create'
+    provider: 'ocf:pacemaker:controld'
+    options:
+      - 'clone interleave=true ordered=true'
+    op: 'monitor'
+    op_options:
+      - 'interval=120s'
+      - 'on-fail=ignore'
+  - resource_id: 'lvmlockd'
+    action: 'create'
+    provider: 'ocf:heartbeat:lvmlockd'
+    options:
+      - 'clone interleave=true ordered=true'
+    op: 'monitor'
+    op_options:
+      - 'on-fail=ignore'
+      - 'interval=120s'
+  - resource_id: 'clusterfs'
+    action: 'create'
+    provider: 'Filesystem'
+    options:
+      - "device=/dev/mapper/{{ gfs2_volume_group }}-{{ gfs2_logical_volume }}"
+      - "directory=/mnt/gfs2"
+      - "fstype=gfs2"
+      - "options=noatime"
+      - 'clone interleave=true'
+    op: 'monitor'
+    op_options:
+      - 'interval=10s'
+      - 'on-fail=ignore'
+pacemaker_cluster_constraints:
+  - constraint: 'order'
+    order:
+      first_resource: 'dlm-clone'
+      first_resource_action: 'start'
+      second_resource: 'lvmlockd-clone'
+      second_resource_action: 'start'
+  - constraint: 'order'
+    order:
+      first_resource: 'lvmlockd-clone'
+      first_resource_action: 'start'
+      second_resource: 'clusterfs-clone'
+      second_resource_action: 'start'
+  - constraint: 'colocation'
+    action: 'add'
+    source_resource_id: 'lvmlockd-clone'
+    target_resource_id: 'dlm-clone'
+    score: 'INFINITY'
+  - constraint: 'colocation'
+    action: 'add'
+    source_resource_id: 'clusterfs-clone'
+    target_resource_id: 'lvmlockd-clone'
+    score: 'INFINITY'
+
+pacemaker_disable_stonith: true
+pacemaker_cluster_settings:
+  - property: 'no-quorum-policy'
+    value: freeze
+pri_domain_name: "{{ domain }}"

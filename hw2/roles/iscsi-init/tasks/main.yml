@@ -1,0 +1,36 @@
+---
+- name: Install packages
+  apt:
+    name:
+      - open-iscsi
+      - multipath-tools
+    state: present
+    cache_valid_time: 7200
+
+- name: Discover targets on portal and login to the one available
+  community.general.open_iscsi:
+    portal: "{{ hostvars['iscsi-node']['int_ip'] }}"
+    login: true
+    discover: true
+    node_auth: CHAP
+    node_user: "{{ iscsi_username }}"
+    node_pass: "{{ iscsi_pass }}"
+
+- name: Configure multipath
+  copy:
+    dest: /etc/multipath.conf
+    content: >
+        defaults {
+          user_friendly_names yes
+          find_multipaths yes
+        }
+
+- name: Run Multipath
+  command: "multipath {{ gfs2_physical_disk }}"
+  changed_when: false
+
+- name: Enable multipath service
+  service:
+    name: multipathd
+    enabled: true
+    state: restarted

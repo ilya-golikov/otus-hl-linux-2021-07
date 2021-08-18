@@ -1,0 +1,46 @@
+---
+- name: Installing Packages
+  apt:
+    name:
+      - "cluster-glue"
+      - "corosync"
+      - "crmsh"
+      - "fence-agents"
+      - "pacemaker"
+      - "pcs"
+      - "resource-agents"
+      - dlm-controld
+      - lvm2-lockd
+      - lvm2
+    state: "present"
+
+- name: Checking If {{ corosync_authkey_file }} Exists
+  stat:
+    path: "{{ corosync_authkey_file }}"
+  register: "_corosync_authkey"
+
+- name: Installing haveged On {{ pacemaker_primary_server }}
+  apt:
+    name: "haveged"
+    state: "present"
+  when: not _corosync_authkey['stat']['exists'] and
+        (inventory_hostname == pacemaker_primary_server)
+
+- name: Generating corosync authkey On {{ pacemaker_primary_server }}
+  command: corosync-keygen
+  register: "_corosync_auth_key_generated"
+  when: not _corosync_authkey['stat']['exists'] and
+        (inventory_hostname == pacemaker_primary_server)
+
+- name: Uninstalling haveged On {{ pacemaker_primary_server }}
+  apt:
+    name: "haveged"
+    purge: true
+    state: "absent"
+  when: _corosync_auth_key_generated['changed'] and
+        (inventory_hostname == pacemaker_primary_server)
+
+- name: Ensuring /etc/corosync/uidgid.d Folder Exists
+  file:
+    path: "/etc/corosync/uidgid.d"
+    state: "directory"

@@ -1,0 +1,39 @@
+---
+- name: Install Packages
+  apt:
+    name:
+      - lvm2
+      - gfs2-utils
+    state: present
+
+- name: Create a volume group
+  community.general.lvg:
+    vg: "{{ gfs2_volume_group }}"
+    pvs: "{{ gfs2_mp_device }}"
+  changed_when: false
+  when: inventory_hostname == play_hosts[0]
+
+- name: Create a logical volume
+  community.general.lvol:
+    vg: "{{ gfs2_volume_group }}"
+    lv: "{{ gfs2_logical_volume }}"
+    size: "{{ gfs2_volume_size }}"
+  changed_when: false
+  when: inventory_hostname == play_hosts[0]
+
+- name: "Check filesystem on /dev/mapper/{{ gfs2_volume_group }}-{{ gfs2_logical_volume }}"
+  command: "tunegfs2 -l /dev/mapper/{{ gfs2_volume_group }}-{{ gfs2_logical_volume }}"
+  changed_when: false
+  failed_when: false
+  register: gfs2_out
+  when: inventory_hostname == play_hosts[0]
+
+- name: "Create a gfs2 filesystem on /dev/mapper/{{ gfs2_volume_group }}-{{ gfs2_logical_volume }}"
+  command: "mkfs.gfs2 -j2 -p lock_dlm -t {{ gfs2_name }} /dev/mapper/{{ gfs2_volume_group }}-{{ gfs2_logical_volume }} -O"
+  changed_when: false
+  when: inventory_hostname == play_hosts[0] and gfs2_name not in gfs2_out.stdout
+
+- name: "Activate /dev/mapper/{{ gfs2_volume_group }}-{{ gfs2_logical_volume }}"
+  command: "lvchange -ay /dev/mapper/{{ gfs2_volume_group }}-{{ gfs2_logical_volume }}"
+  changed_when: false
+  when: inventory_hostname != play_hosts[0]

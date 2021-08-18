@@ -1,0 +1,7 @@
+[iscsi_nodes]
+iscsi-node ansible_host=84.201.174.97 int_ip=10.10.50.5
+
+[gfs2_nodes]
+gfs2-node-0 ansible_host=178.154.205.131 int_ip=10.10.50.26
+gfs2-node-1 ansible_host=178.154.205.193 int_ip=10.10.50.27
+gfs2-node-2 ansible_host=84.201.135.161 int_ip=10.10.50.30

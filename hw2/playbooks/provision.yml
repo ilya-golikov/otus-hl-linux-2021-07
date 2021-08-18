@@ -1,0 +1,18 @@
+---
+- hosts: iscsi_nodes
+  become: true
+  pre_tasks:
+    - name: fix hosts
+      include_tasks: ./fix-hosts.yml
+  roles:
+    - iscsi-target
+
+- hosts: gfs2_nodes
+  become: true
+  pre_tasks:
+    - name: fix hosts
+      include_tasks: ./fix-hosts.yml
+  roles:
+    - iscsi-init
+    - gfs2
+    - pacemaker

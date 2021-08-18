@@ -1,0 +1,19 @@
+---
+- name: Install packages
+  apt:
+    name:
+      - tgt
+    state: present
+    cache_valid_time: 7200
+
+- name: Create conf file
+  template:
+    src: tgt.conf.j2
+    dest: /etc/tgt/conf.d/tgt.conf
+  notify: restart tgt service
+
+- name: Start tgt service
+  service:
+    name: tgt
+    state: started
+    enabled: true

@@ -1,0 +1,7 @@
+[iscsi_nodes]
+iscsi-node ansible_host=${iscsi_node_ip} int_ip=${iscsi_int_ip}
+
+[gfs2_nodes]
+%{ for idx,ip in gfs2_nodes_ip ~}
+gfs2-node-${idx} ansible_host=${ip} int_ip=${gfs2_int_ip[idx]}
+%{ endfor ~}
